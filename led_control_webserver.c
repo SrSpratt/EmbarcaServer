@@ -232,30 +232,11 @@ int user_request(char **request){
     char aux[strlen(*request)];
     strcpy(aux, *request);
 
-    if (strstr(aux, "level=high") != NULL)
-    {
-        level = 10;
-        pwm_level = 1;
-        //printf("\n\nENTROU HIGH\n\n");
-    } else if (strstr(aux, "level=so-so") != NULL){
-        level = 5;
-        pwm_level = 2;
-        //printf("\n\nENTROU SO-AND-SO\n\n");
-    } else if (strstr(aux, "level=low") != NULL){
-        level = 2;
-        pwm_level = 3;
-        //printf("\n\nENTROU LOW\n\n");
-    } else if (strstr(aux, "level=none") != NULL){
-        level = 0;
-        pwm_level = 4;
-        //printf("\n\nENTROU OFF\n\n");
-    }
-
-    if (strstr(aux, "GET /lamp") != NULL)
+    if (strstr(aux, "GET /led_h") != NULL)
     {
         sketch sketch = {
             .main_color = {
-                .blue = 0.01 * level, .green = 0.01 * level, .red = 0.01 * level
+                .blue = 0.1 , .green = 0.1, .red = 0.1
             },
             .figure = {
                 1, 1, 1, 1, 1,
@@ -267,18 +248,68 @@ int user_request(char **request){
         };
         draw(sketch, 0, my_pio, 25);
         //printf("\n\n\nMATRIZ: %d\n\n\n", level);
-    } else if (strstr(aux, "GET /buzzer") != NULL)
-    {
-        pwm_set_gpio_level(BUZZER_A, 0.1 * level * PWM_WRAP);
-        pwm_set_gpio_level(BUZZER_B, 0.1 * level * PWM_WRAP);
-        sleep_ms(100);
-        pwm_set_gpio_level(BUZZER_A, 0);
-        pwm_set_gpio_level(BUZZER_B, 0);
-    } else if (strstr(aux, "GET /water") != NULL)
+    } else if (strstr(aux, "GET /led_m") != NULL)
     {
         sketch sketch = {
             .main_color = {
-                .blue = 0.05 * level, .green = 0.01 * level, .red = 0.01 * level
+                .blue = 0.05, .green = 0.05, .red = 0.05
+            },
+            .figure = {
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1
+            } 
+        };
+        draw(sketch, 0, my_pio, 25);
+        //printf("\n\n\nMATRIZ: %d\n\n\n", level);
+    } else if (strstr(aux, "GET /led_l") != NULL)
+    {
+        sketch sketch = {
+            .main_color = {
+                .blue = 0.01, .green = 0.01, .red = 0.01
+            },
+            .figure = {
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1
+            } 
+        };
+        draw(sketch, 0, my_pio, 25);
+        //printf("\n\n\nMATRIZ: %d\n\n\n", level);
+    } else if (strstr(aux, "GET /led_o") != NULL)
+    {
+        sketch sketch = {
+            .main_color = {
+                .blue = 0.0, .green = 0.0, .red = 0.0
+            },
+            .figure = {
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1
+            } 
+        };
+        draw(sketch, 0, my_pio, 25);
+        //printf("\n\n\nMATRIZ: %d\n\n\n", level);
+    }
+    if (strstr(aux, "GET /buzzer") != NULL)
+    {
+        pwm_set_gpio_level(BUZZER_A, 0.5 * PWM_WRAP);
+        pwm_set_gpio_level(BUZZER_B, 0.5 * PWM_WRAP);
+        sleep_ms(500);
+        pwm_set_gpio_level(BUZZER_A, 0);
+        pwm_set_gpio_level(BUZZER_B, 0);
+    }
+    if (strstr(aux, "GET /water_h") != NULL)
+    {
+        sketch sketch = {
+            .main_color = {
+                .blue = 0.05 , .green = 0.01 , .red = 0.01 
             },
             .figure = {
                 0, 1, 1, 1, 0,
@@ -286,6 +317,22 @@ int user_request(char **request){
                 1, 1, 1, 1, 1,
                 0, 1, 1, 1, 0,
                 0, 0, 1, 0, 0
+            } 
+        };
+        draw(sketch, 0, my_pio, 25);
+        //printf("\n\n\nMATRIZ: %d\n\n\n", level);
+    } else if (strstr(aux, "GET /water_o") != NULL)
+    {
+        sketch sketch = {
+            .main_color = {
+                .blue = 0.0, .green = 0.0, .red = 0.0
+            },
+            .figure = {
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1
             } 
         };
         draw(sketch, 0, my_pio, 25);
@@ -332,73 +379,8 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     // Cria a resposta HTML
     char html[2048];
 
-    char led_high[10];
-    char led_soso[10];
-    char led_low[10];
-    char led_none[10];
-
-    if (level != 0) {
-        current_pwm_level = level;
-    }
-    // printf("\n\n\nPWMLEVEL: %d\n\n", level);
-    // printf("\n\n\nCURRENTPWMLEVEL: %d", current_pwm_level);
-
-    strcpy(led_high, current_pwm_level == 1 ? "selected" : " ");
-    strcpy(led_soso, current_pwm_level == 2 ? "selected" : " ");
-    strcpy(led_low,  current_pwm_level == 3 ? "selected" : " ");
-    strcpy(led_none, (current_pwm_level == 4) || (current_pwm_level == 0) ? "selected" : " ");
-    // printf("\n\n\nALTO: %s", led_high);
-    // printf("\n\n\nMEDIO: %s", led_soso);
-    // printf("\n\n\nBAIXO: %s", led_low);
-    // printf("\n\n\nDESLIGADO: %s", led_none);
-
     // Instruções html do webserver
     snprintf(html, sizeof(html), // Formatar uma string e armazená-la em um buffer de caracteres
-            // "HTTP/1.1 200 OK\r\n"
-            // "Content-Type: text/html\r\n"
-            // "Access-Control-Allow-Origin: *\r\n"
-            // "Connection: keep-alive\r\n"
-            // "Content-length: 2048\r\n"
-            // "Connection: close\r\n"
-            // "\r\n"
-            // "<!DOCTYPE html>"
-            // "<html>"
-            //     "<head>"
-            //         "<title>Home Control</title>"
-            //         "<meta charset=\"UTF-8\">"
-            //         "<style>\n"
-            //             "body {background-color: #b5e5fb; font-family: Arial, sans-serif; text-align: center; margin-top: 50px;}"
-            //             "h1 {font-size: 64px; margin-bottom: 30px; }\n"
-            //             "button {background-color: LightGray; font-size: 36px; margin: 10px; padding: 20px 40px; border-radius: 10px;}"
-            //             ".temperature {font-size: 48px; margin-top: 30px; color: #333;}"
-            //             ".container {}"
-            //         "</style>"
-            //     "</head>"
-            //     "<body>"
-            //         "<div class=\"container\">"
-            //             "<h1 class=\"display-4\">🏠 Controle residencial</h1>"
-            //         "</div>"
-            //         "<div class=\"container\">"
-            //             "<form action=\"./lamp\" method=\"GET\">"
-            //                 "<label for=\"priority\">Nível</label>"
-            //                 "<select name=\"level\" id=\"priority\" style=\"font-size: 32px;\" required>"
-            //                     "<option value=\"high\" %s>Alto</option>"
-            //                     "<option value=\"so-so\" %s>Medio</option>"
-            //                     "<option value=\"low\" %s>Baixo</option>"
-            //                     "<option value=\"none\" %s>Desligar</option>"
-            //                 "</select>"
-            //                 "<button type=\"submit\">💡 Luminaria</button>"
-            //             "</form>"
-            //             "<form action=\"./buzzer\" method=\"GET\">"
-            //                 "<button type=\"submit\">🔔 Campainha</button>"
-            //             "</form>"
-            //             "<form action=\"./water\" method=\"GET\">"
-            //                 "<button type=\"submit\">🚿 Mangueira</button>"
-            //             "</form>"
-            //         "</div>"
-            //         "<p class=\"temperature\">🌡️ Temperatura Interna: %.2f &deg;C</p>"
-            //     "</body>"
-            // "</html>"
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/html\r\n"
             "Connection: close\r\n"
@@ -406,55 +388,101 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
             "<!DOCTYPE html>"
             "<html>"
                 "<head>"
-                    "<title>🏠 Controle</title>"
+                    "<title>🏠Painel</title>"
                     "<meta charset=\"UTF-8\">"
                     "<style>"
-                        "body{background:#f8f9fa;font-family:Arial;margin:0;min-height:100vh;display:flex;flex-direction:column;}"
-                        ".container{max-width:800px;margin:0 auto;padding:20px;}"
-                        ".card{background:#fff;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);padding:20px;margin-bottom:20px;}"
-                        ".btn{display:inline-flex;align-items:center;justify-content:center;"
-                        "background:#6c757d;color:white;border:none;border-radius:5px;"
-                        "padding:12px 24px;font-size:18px;margin:8px;cursor:pointer;transition:all 0.3s;}"
-                        ".btn:hover{opacity:0.8;transform:translateY(-2px);}"
-                        ".btn-primary{background:#0d6efd;}.btn-danger{background:#dc3545;}"
-                        ".btn-success{background:#198754;}.btn-warning{background:#ffc107;color:#000;}"
-                        ".form-group{margin-bottom:1rem;display:flex;align-items:center;}"
-                        "select{padding:8px;border-radius:4px;border:1px solid #ced4da;margin-left:10px;}"
-                        "h1{color:#212529;margin-bottom:1.5rem;}"
-                        ".temp-display{font-size:1.5rem;color:#495057;margin-top:1rem;}"
+                        "body{"
+                            "background:#f8f9fa;"
+                            "font-family:Arial;"
+                            "margin:0;"
+                            "min-height:100vh;"
+                            "display:flex;"
+                            "flex-direction:column;}"
+                        ".container{"
+                            "max-width:800px;"
+                            "margin:0 auto;"
+                            "padding:20px;}"
+                        ".card{background:#fff;"
+                            "border-radius:10px;"
+                            "box-shadow:0 4px 6px rgba(0,0,0,0.1);"
+                            "padding:20px;"
+                            "margin-bottom:20px;}"
+                        ".btn{"
+                            "display:inline-flex;"
+                            "align-items:center;"
+                            "justify-content:center;"
+                            "background:#6c757d;"
+                            "color:white;"
+                            "border:none;"
+                            "border-radius:5px;"
+                            "padding:12px 24px;"
+                            "font-size:18px;"
+                            "margin:8px;"
+                            "cursor:pointer;"
+                            "transition:all 0.3s;}"
+                        ".btn:hover{"
+                            "opacity:0.8;"
+                            "transform:translateY(-2px);}"
+                        ".btn-p{"
+                            "background:#0d6efd;}"
+                        ".btn-d{"
+                            "background:#dc3545;}"
+                        ".btn-s{"
+                            "background:#198754;}"
+                        ".btn-w{"
+                            "background:#ffc107;color:#000;}"
+                        ".form-group{"
+                            "margin-bottom:1rem;"
+                            "display:flex;"
+                            "align-items:center;}"
+                        "select{"
+                            "padding:8px;"
+                            "border-radius:4px;"
+                            "border:1px solid #ced4da;"
+                            "margin-left:10px;}"
+                        "h1{"
+                            "color:#212529;"
+                            "margin-bottom:1.5rem;}"
+                        ".temp-display{"
+                            "font-size:1.5rem;"
+                            "color:#495057;"
+                            "margin-top:1rem;}"
                     "</style>"
-                    "<script>"
-                        "function handleSubmit(e,form){"
-                            "e.preventDefault();"
-                            "fetch(form.action+'?'+new URLSearchParams(new FormData(form)),{method:'GET'})"
-                            ".then(()=>window.location.reload());"
-                        "}"
-                    "</script>"
                 "</head>"
                 "<body>"
                     "<div class=\"container\">"
-                        "<h1>🏠 Controle Residencial</h1>"
+                        "<h1>🏠 Painel</h1>"
                     "<div class=\"card\">"
-                        "<form action=\"./lamp\" method=\"GET\" class=\"form-group\">"
-                            "<select name=\"level\" required>"
-                                "<option value=\"high\" %s>Alto</option>"
-                                "<option value=\"so-so\" %s>Medio</option>"
-                                "<option value=\"low\" %s>Baixo</option>"
-                                "<option value=\"none\" %s>Desligar</option>"
-                            "</select>"
-                            "<button type=\"submit\" class=\"btn btn-primary\">💡 Luminaria</button>"
+                        "<h4>💡 Luz</h4>"
+                        "<form action=\"./led_h\" method=\"GET\" class=\"form-group\">"
+                            "<button type=\"submit\" class=\"btn btn-p\">Alto</button>"
                         "</form>"
+                        "<form action=\"./led_m\" method=\"GET\" class=\"form-group\">"
+                            "<button type=\"submit\" class=\"btn btn-p\">Médio</button>"
+                        "</form>"
+                        "<form action=\"./led_l\" method=\"GET\" class=\"form-group\">"
+                            "<button type=\"submit\" class=\"btn btn-p\">Baixo</button>"
+                        "</form>"
+                        "<form action=\"./led_o\" method=\"GET\" class=\"form-group\">"
+                            "<button type=\"submit\" class=\"btn btn-d\">Off</button>"
+                        "</form>"
+                    "</div>"
+                    "<div class=\"card\">"
+                        "<h4>Outros</h4>"
                         "<form action=\"./buzzer\" method=\"GET\">"
-                            "<button type=\"submit\" class=\"btn btn-warning\">🔔 Campainha</button>"
+                            "<button type=\"submit\" class=\"btn btn-w\">🔔 Toque</button>"
                         "</form>"
-                        "<form action=\"./water\" method=\"GET\">"
-                            "<button type=\"submit\" class=\"btn btn-success\">🚿 Mangueira</button>"
+                        "<form action=\"./water_h\" method=\"GET\">"
+                            "<button type=\"submit\" class=\"btn btn-s\">🚿 Água</button>"
+                        "</form>"
+                        "<form action=\"./water_o\" method=\"GET\">"
+                            "<button type=\"submit\" class=\"btn btn-s\">🚱 Água</button>"
                         "</form>"
                     "</div>"
                         "<p class=\"temp-display\">🌡️ Temperatura: %.2f°C</p>"
                     "</div>"
                 "</body>"
-            "</html>", led_high, led_soso, led_low, led_none, led_high, led_soso, led_low, led_none, led_high, led_soso, led_low, led_none, temperature);
+            "</html>", temperature);
 
     // Escreve dados para envio (mas não os envia imediatamente).
     tcp_write(tpcb, html, strlen(html), TCP_WRITE_FLAG_COPY);
