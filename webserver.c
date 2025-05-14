@@ -18,17 +18,20 @@
 #define WIFI_SSID "SSID"
 #define WIFI_PASSWORD "SENHA"
 
-#define PWM_WRAP 20000
-#define PWM_CLKDIV 125.0f
+
+#define PWM_WRAP 20000 //contador do PWM
+#define PWM_CLKDIV 125.0f //divisor de clock do PWM
 
 // Definição dos pinos dos LEDs
 #define LED_PIN CYW43_WL_GPIO_LED_PIN   // GPIO do CI CYW43
 #define LED_BLUE_PIN 12                 // GPIO12 - LED azul
 #define LED_GREEN_PIN 11                // GPIO11 - LED verde
 #define LED_RED_PIN 13                  // GPIO13 - LED vermelho
-#define BUZZER_A 10
-#define BUZZER_B 21
+#define BUZZER_A 10 // BUZZER A
+#define BUZZER_B 21 // BUZZER B
 
+
+//struct para armazenar a pio
 typedef struct pio_refs{
     PIO address;
     int state_machine;
@@ -36,21 +39,25 @@ typedef struct pio_refs{
     int pin;
 } pio_ref;
 
+//struct para armazenar a cor para o desenho
 typedef struct rgb{
     double red;
     double green;
     double blue;
 } rgb;
 
+//struct para armazenar o desenho
 typedef struct drawing {
     double figure[25]; /**< Matriz de dados da figura. */
     rgb main_color;  /**< Cor principal da figura. */
 } sketch;
 
+//definição de pio estática para manipulação facilitada através das requisições
 static pio_ref my_pio;
-// Inicializar os Pinos GPIO para acionamento dos LEDs da BitDogLab
+// Inicia PWM para os pinos dos LEDs e Buzzer 
 void led_pwm(void);
 void buzzer_pwm(void);
+//Configura a pio
 void config_pio(pio_ref *pio);
 
 // Função de callback ao aceitar conexões TCP
@@ -67,8 +74,10 @@ int user_request(char **request);
 
 void config_pio(pio_ref* pio);
 
+//retorna a cor da matriz de leds
 uint32_t rgb_matrix(rgb color);
 
+//desenha na matrix de leds
 void draw(sketch sketch, uint32_t led_cfg, pio_ref pio, const uint8_t vector_size);
 
 // Função principal
@@ -77,17 +86,20 @@ int main()
     //Inicializa todos os tipos de bibliotecas stdio padrão presentes que estão ligados ao binário.
     stdio_init_all();
 
-    // Inicializar os Pinos GPIO para acionamento dos LEDs da BitDogLab
+    // Inicia o PWM para os pinos dos LEDs e buzzers
     led_pwm();
     buzzer_pwm();
 
+    //atribui os valores iniciais à pio estática
     my_pio.pin = 7;
     my_pio.address = 0;
     my_pio.offset = 0;
     my_pio.state_machine = 0;
 
+    //configura a pio estática
     config_pio(&my_pio);
 
+    //ativa pwm no led azul para mostrar que está buscando a rede
     pwm_set_gpio_level(LED_BLUE_PIN, 1024);
 
     //Inicializa a arquitetura do cyw43
@@ -121,6 +133,7 @@ int main()
 
     printf("Conectado ao Wi-Fi\n");
     pwm_set_gpio_level(LED_BLUE_PIN, 0);
+    //ativa o pino verde para indicar que está conectado
     pwm_set_gpio_level(LED_GREEN_PIN, 1024);
     pwm_set_gpio_level(LED_RED_PIN, 0);
 
@@ -176,7 +189,7 @@ int main()
 
 // Inicializar os Pinos GPIO para acionamento dos LEDs da BitDogLab
 void led_pwm(void){
-    // Configuração dos LEDs como saída
+    // Configuração pwm para o led azul
     gpio_set_function(LED_BLUE_PIN, GPIO_FUNC_PWM);
     int blue_slice = pwm_gpio_to_slice_num(LED_BLUE_PIN);
 
@@ -184,6 +197,7 @@ void led_pwm(void){
     pwm_set_clkdiv(blue_slice, PWM_CLKDIV);  
     pwm_set_enabled(blue_slice, true);
 
+    //configura pwm para o led verde
     gpio_set_function(LED_GREEN_PIN, GPIO_FUNC_PWM);
     int green_slice = pwm_gpio_to_slice_num(LED_GREEN_PIN);
 
@@ -191,6 +205,7 @@ void led_pwm(void){
     pwm_set_clkdiv(green_slice, PWM_CLKDIV);  
     pwm_set_enabled(green_slice, true);
 
+    //configura pwm para o led vermelho
     gpio_set_function(LED_RED_PIN, GPIO_FUNC_PWM);
     int red_slice = pwm_gpio_to_slice_num(LED_RED_PIN);
 
@@ -200,7 +215,7 @@ void led_pwm(void){
 }
 
 void buzzer_pwm(void){
-    // Configuração dos LEDs como saída
+    // Confira pwm para o buzzer a
     gpio_set_function(BUZZER_A, GPIO_FUNC_PWM);
     int a_slice = pwm_gpio_to_slice_num(BUZZER_A);
 
@@ -208,6 +223,7 @@ void buzzer_pwm(void){
     pwm_set_clkdiv(a_slice, PWM_CLKDIV);  
     pwm_set_enabled(a_slice, true);
 
+    //configura pwm para o buzzer b
     gpio_set_function(BUZZER_B, GPIO_FUNC_PWM);
     int b_slice = pwm_gpio_to_slice_num(BUZZER_B);
 
@@ -226,12 +242,15 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 // Tratamento do request do usuário - digite aqui
 int user_request(char **request){
  
+    //acabou que não utilizei esses inteiros
     int level = 0;
     int pwm_level = 0;
 
+    //buffer auxiliar para não acabar corrompendo a requisição
     char aux[strlen(*request)];
     strcpy(aux, *request);
 
+    //acende a luminária na maior intensidade
     if (strstr(aux, "GET /led_h") != NULL)
     {
         sketch sketch = {
@@ -248,7 +267,7 @@ int user_request(char **request){
         };
         draw(sketch, 0, my_pio, 25);
         //printf("\n\n\nMATRIZ: %d\n\n\n", level);
-    } else if (strstr(aux, "GET /led_m") != NULL)
+    } else if (strstr(aux, "GET /led_m") != NULL) // acende a luminária na intensidade média
     {
         sketch sketch = {
             .main_color = {
@@ -264,7 +283,7 @@ int user_request(char **request){
         };
         draw(sketch, 0, my_pio, 25);
         //printf("\n\n\nMATRIZ: %d\n\n\n", level);
-    } else if (strstr(aux, "GET /led_l") != NULL)
+    } else if (strstr(aux, "GET /led_l") != NULL) //acende a luminária na baixa intensidade
     {
         sketch sketch = {
             .main_color = {
@@ -280,7 +299,7 @@ int user_request(char **request){
         };
         draw(sketch, 0, my_pio, 25);
         //printf("\n\n\nMATRIZ: %d\n\n\n", level);
-    } else if (strstr(aux, "GET /led_o") != NULL)
+    } else if (strstr(aux, "GET /led_o") != NULL) //desliga a luminária
     {
         sketch sketch = {
             .main_color = {
@@ -297,7 +316,7 @@ int user_request(char **request){
         draw(sketch, 0, my_pio, 25);
         //printf("\n\n\nMATRIZ: %d\n\n\n", level);
     }
-    if (strstr(aux, "GET /buzzer") != NULL)
+    if (strstr(aux, "GET /buzzer") != NULL) //liga o buzzer
     {
         pwm_set_gpio_level(BUZZER_A, 0.5 * PWM_WRAP);
         pwm_set_gpio_level(BUZZER_B, 0.5 * PWM_WRAP);
@@ -305,7 +324,7 @@ int user_request(char **request){
         pwm_set_gpio_level(BUZZER_A, 0);
         pwm_set_gpio_level(BUZZER_B, 0);
     }
-    if (strstr(aux, "GET /water_h") != NULL)
+    if (strstr(aux, "GET /water_h") != NULL) //ativa o acionamento de água
     {
         sketch sketch = {
             .main_color = {
@@ -321,7 +340,7 @@ int user_request(char **request){
         };
         draw(sketch, 0, my_pio, 25);
         //printf("\n\n\nMATRIZ: %d\n\n\n", level);
-    } else if (strstr(aux, "GET /water_o") != NULL)
+    } else if (strstr(aux, "GET /water_o") != NULL) //desliga o acionamento de água
     {
         sketch sketch = {
             .main_color = {
