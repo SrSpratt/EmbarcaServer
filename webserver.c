@@ -14,6 +14,8 @@
 #include "lwip/tcp.h"            // Lightweight IP stack - fornece funções e estruturas para trabalhar com o protocolo TCP
 #include "lwip/netif.h"          // Lightweight IP stack - fornece funções e estruturas para trabalhar com interfaces de rede (netif)
 
+#include "pico/bootrom.h"
+
 // Credenciais WIFI - Tome cuidado se publicar no github!
 #define WIFI_SSID "SSID"
 #define WIFI_PASSWORD "SENHA"
@@ -27,6 +29,7 @@
 #define LED_BLUE_PIN 12                 // GPIO12 - LED azul
 #define LED_GREEN_PIN 11                // GPIO11 - LED verde
 #define LED_RED_PIN 13                  // GPIO13 - LED vermelho
+#define BUTTON_B 6
 #define BUZZER_A 10 // BUZZER A
 #define BUZZER_B 21 // BUZZER B
 
@@ -80,9 +83,18 @@ uint32_t rgb_matrix(rgb color);
 //desenha na matrix de leds
 void draw(sketch sketch, uint32_t led_cfg, pio_ref pio, const uint8_t vector_size);
 
+void reboot(uint gpio, uint32_t events){
+    reset_usb_boot(0,0);
+}
+
 // Função principal
 int main()
 {
+
+    gpio_init(BUTTON_B);
+    gpio_set_dir(BUTTON_B, GPIO_IN);
+    gpio_pull_up(BUTTON_B);
+    gpio_set_irq_enabled_with_callback(BUTTON_B, GPIO_IRQ_EDGE_FALL, true, &reboot);
     //Inicializa todos os tipos de bibliotecas stdio padrão presentes que estão ligados ao binário.
     stdio_init_all();
 
@@ -166,6 +178,8 @@ int main()
     printf("Servidor ouvindo na porta 80\n");
 
     // Inicializa o conversor ADC
+    adc_gpio_init(27);
+    adc_gpio_init(26);
     adc_init();
     adc_set_temp_sensor_enabled(true);
 
@@ -393,10 +407,20 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     int level = user_request(&request);
     
     // Leitura da temperatura interna
-    float temperature = temp_read();
+    //float temperature = temp_read();
+    adc_select_input(1); // GPIO 26 = ADC0
+    float temperature = (adc_read() * 25) / 4095;
+    adc_select_input(0); // GPIO 26 = ADC0
+    int humidity = (adc_read() * 100) / 4095;
+    char condition[7];
+
+    if ((humidity > 30 && humidity < 50) && (temperature > 20 && temperature < 30))
+        sprintf(condition, "boas!");
+    else 
+        sprintf(condition, "ruins!");
 
     // Cria a resposta HTML
-    char html[2048];
+    char html[3072];
 
     // Instruções html do webserver
     snprintf(html, sizeof(html), // Formatar uma string e armazená-la em um buffer de caracteres
@@ -416,16 +440,29 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
                             "margin:0;"
                             "min-height:100vh;"
                             "display:flex;"
-                            "flex-direction:column;}"
+                            "flex-direction:column;"
+                            "align-items:center;}"
                         ".container{"
                             "max-width:800px;"
                             "margin:0 auto;"
-                            "padding:20px;}"
+                            "padding:20px;"
+                            "display:flex;"
+                            "flex-direction: row;}"
+                        ".section{"
+                            "display:flex;"
+                            "flex-direction:column;"
+                            "background:#f6f6f6;"
+                            "border-radius:10px;"
+                            "padding: 10px;"
+                            "box-shadow:0 4px 6px rgba(0,0,0,0.1);"
+                            "}"
                         ".card{background:#fff;"
                             "border-radius:10px;"
                             "box-shadow:0 4px 6px rgba(0,0,0,0.1);"
                             "padding:20px;"
                             "margin-bottom:20px;}"
+                        ".content{display:flex;"
+                            "flex-direction:row;}"
                         ".btn{"
                             "display:inline-flex;"
                             "align-items:center;"
@@ -462,46 +499,78 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
                         "h1{"
                             "color:#212529;"
                             "margin-bottom:1.5rem;}"
-                        ".temp-display{"
-                            "font-size:1.5rem;"
+                        ".sensor{"
+                            "font-size:12px;"
                             "color:#495057;"
                             "margin-top:1rem;}"
                     "</style>"
+                    "<script>"
+                    "setTimeout(()=>{"
+                        "location.reload();"
+                    "},10000);" // 30000 ms = 30 segundos
+                    "</script>"
                 "</head>"
                 "<body>"
+                    "<h1>🏠 Painel</h1>"
                     "<div class=\"container\">"
-                        "<h1>🏠 Painel</h1>"
-                    "<div class=\"card\">"
-                        "<h4>💡 Luz</h4>"
-                        "<form action=\"./led_h\" method=\"GET\" class=\"form-group\">"
-                            "<button type=\"submit\" class=\"btn btn-p\">Alto</button>"
-                        "</form>"
-                        "<form action=\"./led_m\" method=\"GET\" class=\"form-group\">"
-                            "<button type=\"submit\" class=\"btn btn-p\">Médio</button>"
-                        "</form>"
-                        "<form action=\"./led_l\" method=\"GET\" class=\"form-group\">"
-                            "<button type=\"submit\" class=\"btn btn-p\">Baixo</button>"
-                        "</form>"
-                        "<form action=\"./led_o\" method=\"GET\" class=\"form-group\">"
-                            "<button type=\"submit\" class=\"btn btn-d\">Off</button>"
-                        "</form>"
-                    "</div>"
-                    "<div class=\"card\">"
-                        "<h4>Outros</h4>"
-                        "<form action=\"./buzzer\" method=\"GET\">"
-                            "<button type=\"submit\" class=\"btn btn-w\">🔔 Toque</button>"
-                        "</form>"
-                        "<form action=\"./water_h\" method=\"GET\">"
-                            "<button type=\"submit\" class=\"btn btn-s\">🚿 Água</button>"
-                        "</form>"
-                        "<form action=\"./water_o\" method=\"GET\">"
-                            "<button type=\"submit\" class=\"btn btn-s\">🚱 Água</button>"
-                        "</form>"
-                    "</div>"
-                        "<p class=\"temp-display\">🌡️ Temperatura: %.2f°C</p>"
+                        "<div class=\"office section\">"
+                            "<h4>Escritório</h4>"
+                            "<div class=\"card\">"
+                                "<h4>💡 Luz</h4>"
+                                "<div class=\"content\">"
+                                    "<form action=\"./led_h\" method=\"GET\" class=\"form-group\">"
+                                        "<button type=\"submit\" class=\"btn btn-p\">Alto</button>"
+                                    "</form>"
+                                    "<form action=\"./led_m\" method=\"GET\" class=\"form-group\">"
+                                        "<button type=\"submit\" class=\"btn btn-p\">Médio</button>"
+                                    "</form>"
+                                    "<form action=\"./led_l\" method=\"GET\" class=\"form-group\">"
+                                        "<button type=\"submit\" class=\"btn btn-p\">Baixo</button>"
+                                    "</form>"
+                                    "<form action=\"./led_o\" method=\"GET\" class=\"form-group\">"
+                                        "<button type=\"submit\" class=\"btn btn-d\">Off</button>"
+                                    "</form>"
+                                "</div>"
+                            "</div>"
+                            "<div class=\"card\">"
+                                "<h4>Outros</h4>"
+                                "<div class=\"content\">"
+                                    "<form action=\"./buzzer\" method=\"GET\">"
+                                        "<button type=\"submit\" class=\"btn btn-w\">🔔 Toque</button>"
+                                    "</form>"
+                                    "<form action=\"./water_h\" method=\"GET\">"
+                                        "<button type=\"submit\" class=\"btn btn-s\">🚿 Água</button>"
+                                    "</form>"
+                                    "<form action=\"./water_o\" method=\"GET\">"
+                                        "<button type=\"submit\" class=\"btn btn-s\">🚱 Água</button>"
+                                    "</form>"
+                                "</div>"
+                            "</div>"
+                        "</div>"
+                        "<div class=\"greenhouse section\">"
+                            "<h4>Estufa</h4>"
+                            "<div class=\"card\">"
+                                "<h4>Sensores</h4>"
+                                "<div class=\"content\">"
+                                    "<p class=\"sensor temp\">🌡️ Temperatura: %.2f°C</p>"
+                                    "<p class=\"sensor moisture\">💧 Umidade: %d%%</p>"
+                                    "<p class=\"sensor moisture\">As condições estão %s</p>"
+                                "</div>"
+                            "</div>"
+                            "<div class=\"card\">"
+                                "<h4>Atuadores</h4>"
+                                "<div class=\"content\">"
+                                    "<form action=\"./water_h\" method=\"GET\">"
+                                        "<button type=\"submit\" class=\"btn btn-s\">🚿 Água</button>"
+                                    "</form>"
+                                    "<form action=\"./water_o\" method=\"GET\">"
+                                        "<button type=\"submit\" class=\"btn btn-s\">🚱 Água</button>"
+                                    "</form>"
+                                "</div>"
+                        "</div>"
                     "</div>"
                 "</body>"
-            "</html>", temperature);
+            "</html>", temperature, humidity, condition);
 
     // Escreve dados para envio (mas não os envia imediatamente).
     tcp_write(tpcb, html, strlen(html), TCP_WRITE_FLAG_COPY);
