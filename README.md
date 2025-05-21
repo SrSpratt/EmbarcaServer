@@ -36,4 +36,6 @@ Ao executar o programa, ele buscará conectar-se com a rede informada:
     * Os botões a seguir fazem referência a:
         * Uma campainha, que toca o buzzer para avisar os moradores da chegada
         * Um botão que simula o controle de uma mangueira de água para o jardim com dois botões: ligado e desligado
-    * Ao final, há um medidor de temperatura
+        * Quando ligada, a mangueira altera as leituras de temperatura em 1 grau e as de umidade em 5%.
+* As leituras de temperatura são feitas com a movimentação do joystick
+
