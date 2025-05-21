@@ -7,7 +7,7 @@
 Para o desenvolvimento do Webserver, foram utilizados o terminal wi-fi cyw43-arch, os LEDs RGB, a matriz de LEDs WS2818 e os Buzzers.
 
 #### Vídeo de funcionamento
-* https://youtu.be/qoS5NFR8Fj8
+* https://youtu.be/JTe9A3n6bv4
 
 
 #### Instruções de compilação
