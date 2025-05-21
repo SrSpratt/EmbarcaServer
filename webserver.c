@@ -353,6 +353,7 @@ int user_request(char **request){
             } 
         };
         draw(sketch, 0, my_pio, 25);
+        pwm_level = 1;
         //printf("\n\n\nMATRIZ: %d\n\n\n", level);
     } else if (strstr(aux, "GET /water_o") != NULL) //desliga o acionamento de água
     {
@@ -369,6 +370,7 @@ int user_request(char **request){
             } 
         };
         draw(sketch, 0, my_pio, 25);
+        pwm_level = -1;
         //printf("\n\n\nMATRIZ: %d\n\n\n", level);
     }
 
@@ -386,6 +388,7 @@ float temp_read(void){
 
 
 static int current_pwm_level = 0;
+static int lastLevel = 0;
 // Função de callback para processar requisições HTTP
 static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
@@ -404,14 +407,22 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     printf("Request: %s\n", request);
 
     // Tratamento de request - Controle dos LEDs
-    int level = user_request(&request);
     
+    int level = user_request(&request);
+    if (level != 0)
+        lastLevel = level;
+
     // Leitura da temperatura interna
     //float temperature = temp_read();
     adc_select_input(1); // GPIO 26 = ADC0
-    float temperature = (adc_read() * 25) / 4095;
+    float temperature = (adc_read() * 50) / 4095;
     adc_select_input(0); // GPIO 26 = ADC0
     int humidity = (adc_read() * 100) / 4095;
+    if (lastLevel > 0){
+        humidity += 5;
+        temperature -=1;
+    }
+
     char condition[7];
 
     if ((humidity > 30 && humidity < 50) && (temperature > 20 && temperature < 30))
@@ -462,7 +473,8 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
                             "padding:20px;"
                             "margin-bottom:20px;}"
                         ".content{display:flex;"
-                            "flex-direction:row;}"
+                            "flex-direction:row;"
+                            "flex-wrap:wrap;}"
                         ".btn{"
                             "display:inline-flex;"
                             "align-items:center;"
@@ -502,7 +514,11 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
                         ".sensor{"
                             "font-size:12px;"
                             "color:#495057;"
-                            "margin-top:1rem;}"
+                            "margin-top:1rem;"
+                            "flex:1 1 50%%}"
+                        ".text{"
+                            "display:flex;"
+                            "flex:1 1 100%%;}"
                     "</style>"
                     "<script>"
                     "setTimeout(()=>{"
@@ -538,12 +554,6 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
                                     "<form action=\"./buzzer\" method=\"GET\">"
                                         "<button type=\"submit\" class=\"btn btn-w\">🔔 Toque</button>"
                                     "</form>"
-                                    "<form action=\"./water_h\" method=\"GET\">"
-                                        "<button type=\"submit\" class=\"btn btn-s\">🚿 Água</button>"
-                                    "</form>"
-                                    "<form action=\"./water_o\" method=\"GET\">"
-                                        "<button type=\"submit\" class=\"btn btn-s\">🚱 Água</button>"
-                                    "</form>"
                                 "</div>"
                             "</div>"
                         "</div>"
@@ -554,7 +564,7 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
                                 "<div class=\"content\">"
                                     "<p class=\"sensor temp\">🌡️ Temperatura: %.2f°C</p>"
                                     "<p class=\"sensor moisture\">💧 Umidade: %d%%</p>"
-                                    "<p class=\"sensor moisture\">As condições estão %s</p>"
+                                    "<p class=\"text\">As condições estão %s</p>"
                                 "</div>"
                             "</div>"
                             "<div class=\"card\">"
